@@ -1,0 +1,153 @@
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-base:    #1a1a2e;
+  --bg-surface: #16213e;
+  --bg-card:    #1e1e2e;
+  --border:     #313244;
+  --text-main:  #cdd6f4;
+  --text-muted: #7f849c;
+  --accent:     #89b4fa;
+  --danger:     #ef5350;
+  --warning:    #ffa726;
+  --safe:       #66bb6a;
+  --radius:     10px;
+  --gap:        1.25rem;
+}
+
+html { font-size: 15px; }
+
+body {
+  background: var(--bg-base);
+  color: var(--text-main);
+  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', monospace, system-ui;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.app-header {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.app-header h1 {
+  font-size: 1.15rem;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.app-header .subtitle {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--gap) 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.section-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: var(--gap);
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem;
+  position: relative;
+}
+
+.card canvas {
+  width: 100% !important;
+  max-height: 220px;
+}
+
+.chart-placeholder {
+  display: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 0.3em 0.75em;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge--safe {
+  background: #66bb6a22;
+  border-color: var(--safe);
+  color: var(--safe);
+}
+
+.badge--warning {
+  background: #ffa72622;
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.badge--danger {
+  background: #ef535022;
+  border-color: var(--danger);
+  color: var(--danger);
+  animation: pulse-border 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 #ef535055; }
+  50%       { box-shadow: 0 0 0 4px #ef535000; }
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .app-header { padding: 0.75rem 1rem; }
+  main { padding: var(--gap) 0.75rem 2rem; }
+}
