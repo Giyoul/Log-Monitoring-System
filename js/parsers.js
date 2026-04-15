@@ -16,6 +16,7 @@ function parseCpuSummary(text) {
     loadAvg15m: [],
     physMemUnusedMB: [],
     swapoutsDelta: [],
+    totalRamMB: null,   // extracted from first valid block
   };
 
   // Split into blocks by double newline
@@ -45,11 +46,16 @@ function parseCpuSummary(text) {
       if (cpuMatch) { user = parseFloat(cpuMatch[1]); sys = parseFloat(cpuMatch[2]); idle = parseFloat(cpuMatch[3]); continue; }
 
       // PhysMem: "PhysMem: 17G used (3001M wired, 6662M compressor), 99M unused."
-      // unused can be M or G
+      const memUsedMatch = line.match(/PhysMem:\s*([\d.]+)([MG])\s*used/);
       const memMatch = line.match(/PhysMem:.*?,\s*([\d.]+)([MG])\s*unused/);
       if (memMatch) {
         const val = parseFloat(memMatch[1]);
         unusedMB = memMatch[2] === 'G' ? val * 1024 : val;
+        if (memUsedMatch && result.totalRamMB === null) {
+          const usedVal = parseFloat(memUsedMatch[1]);
+          const usedMB = memUsedMatch[2] === 'G' ? usedVal * 1024 : usedVal;
+          result.totalRamMB = usedMB + unusedMB;
+        }
         continue;
       }
 
@@ -140,17 +146,25 @@ function parseHwLog(text) {
     timestamps: [],
     eClusterResidency: [],
     pClusterResidency: [],
+    eClusterFreqMHz: [],
+    pClusterFreqMHz: [],
     cpuPowerMW: [],
     gpuPowerMW: [],
     anePowerMW: [],
     gpuResidency: [],
+    gpuFreqMHz: [],
     thermalLevels: [],
+    machineModel: null,
   };
 
-  // Split into snapshots
   // Normalize line endings before parsing (CRLF → LF)
   const normalized = text.replace(/\r\n/g, '\n');
-  // First element after split is preamble (machine info before first snapshot) — skip it
+
+  // Extract machine model from preamble
+  const modelMatch = normalized.match(/Machine model:\s*(.+)/);
+  if (modelMatch) result.machineModel = modelMatch[1].trim();
+
+  // First element after split is preamble — skip it
   const snapshots = normalized.split(/\*\*\* Sampled system activity/).slice(1).filter(s => s.trim().length > 0);
 
   for (const snap of snapshots) {
@@ -161,13 +175,17 @@ function parseHwLog(text) {
     const timeMatch = ts.match(/(\d{2}:\d{2}:\d{2})/);
     result.timestamps.push(timeMatch ? timeMatch[1] : ts);
 
-    // E-Cluster HW active residency: "E-Cluster HW active residency:  61.88%"
+    // E-Cluster HW active residency & frequency
     const eMatch = snap.match(/E-Cluster HW active residency:\s*([\d.]+)%/);
     result.eClusterResidency.push(eMatch ? parseFloat(eMatch[1]) : null);
+    const eFreqMatch = snap.match(/E-Cluster HW active frequency:\s*([\d.]+)\s*MHz/);
+    result.eClusterFreqMHz.push(eFreqMatch ? parseFloat(eFreqMatch[1]) : null);
 
-    // P-Cluster HW active residency: "P-Cluster HW active residency:  27.04%"
+    // P-Cluster HW active residency & frequency
     const pMatch = snap.match(/P-Cluster HW active residency:\s*([\d.]+)%/);
     result.pClusterResidency.push(pMatch ? parseFloat(pMatch[1]) : null);
+    const pFreqMatch = snap.match(/P-Cluster HW active frequency:\s*([\d.]+)\s*MHz/);
+    result.pClusterFreqMHz.push(pFreqMatch ? parseFloat(pFreqMatch[1]) : null);
 
     // CPU Power: "CPU Power: 1148 mW"
     const cpuPwrMatch = snap.match(/CPU Power:\s*([\d.]+)\s*mW/);
@@ -181,9 +199,11 @@ function parseHwLog(text) {
     const anePwrMatch = snap.match(/ANE Power:\s*([\d.]+)\s*mW/);
     result.anePowerMW.push(anePwrMatch ? parseFloat(anePwrMatch[1]) : null);
 
-    // GPU HW active residency: "GPU HW active residency:  12.91%"
+    // GPU HW active residency & frequency
     const gpuResMatch = snap.match(/GPU HW active residency:\s*([\d.]+)%/);
     result.gpuResidency.push(gpuResMatch ? parseFloat(gpuResMatch[1]) : null);
+    const gpuFreqMatch = snap.match(/GPU HW active frequency:\s*([\d.]+)\s*MHz/);
+    result.gpuFreqMHz.push(gpuFreqMatch ? parseFloat(gpuFreqMatch[1]) : null);
 
     // Thermal pressure level: "Current pressure level: Nominal"
     const thermalMatch = snap.match(/Current pressure level:\s*(\w+)/);

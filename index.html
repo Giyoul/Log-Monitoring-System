@@ -9,10 +9,24 @@
 </head>
 <body>
 
+  <!-- ── 모달 ──────────────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title" id="modal-title"></span>
+        <button class="modal-close" id="modal-close" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <canvas id="modal-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 헤더 ──────────────────────────────────────────────────────────── -->
   <header class="app-header">
     <div>
       <h1>오디오 중계 시스템 모니터링</h1>
-      <p class="subtitle">relay_cpu_summary · relay_disk_log · relay_hw_log</p>
+      <p class="subtitle" id="machine-model">relay_cpu_summary · relay_disk_log · relay_hw_log</p>
     </div>
     <div class="badges-row" id="badges-row">
       <span class="badge" id="badge-swapout" style="display:none"></span>
@@ -25,68 +39,39 @@
 
     <!-- ── CPU Summary ──────────────────────────────────────────────────── -->
     <section class="section" id="section-cpu">
-      <h2 class="section-title">CPU · 메모리 (top)</h2>
+      <h2 class="section-title">CPU · 메모리 <span class="section-tag">top</span></h2>
+      <div class="spec-ribbon" id="specs-cpu"></div>
       <p class="chart-placeholder"></p>
       <div class="charts-grid">
-
-        <div class="card">
-          <canvas id="chart-cpu-usage"></canvas>
-        </div>
-
-        <div class="card">
-          <canvas id="chart-load-avg"></canvas>
-        </div>
-
-        <div class="card">
-          <canvas id="chart-mem-unused"></canvas>
-        </div>
-
-        <div class="card">
-          <canvas id="chart-swapouts"></canvas>
-        </div>
-
+        <div class="card"><canvas id="chart-cpu-usage"></canvas></div>
+        <div class="card"><canvas id="chart-load-avg"></canvas></div>
+        <div class="card"><canvas id="chart-mem-unused"></canvas></div>
+        <div class="card"><canvas id="chart-swapouts"></canvas></div>
       </div>
     </section>
 
     <!-- ── Disk ────────────────────────────────────────────────────────── -->
     <section class="section" id="section-disk">
-      <h2 class="section-title">디스크 · CPU (iostat)</h2>
+      <h2 class="section-title">디스크 · CPU <span class="section-tag">iostat</span></h2>
+      <div class="spec-ribbon" id="specs-disk"></div>
       <p class="chart-placeholder"></p>
       <div class="charts-grid">
-
-        <div class="card">
-          <canvas id="chart-disk-mbs"></canvas>
-        </div>
-
-        <div class="card">
-          <canvas id="chart-disk-cpu"></canvas>
-        </div>
-
-        <div class="card">
-          <canvas id="chart-disk-load"></canvas>
-        </div>
-
+        <div class="card"><canvas id="chart-disk-mbs"></canvas></div>
+        <div class="card"><canvas id="chart-disk-cpu"></canvas></div>
+        <div class="card"><canvas id="chart-disk-load"></canvas></div>
       </div>
     </section>
 
     <!-- ── Hardware ────────────────────────────────────────────────────── -->
     <section class="section" id="section-hw">
-      <h2 class="section-title">하드웨어 (powermetrics)</h2>
+      <h2 class="section-title">하드웨어 <span class="section-tag">powermetrics</span></h2>
+      <div class="spec-ribbon" id="specs-hw"></div>
       <p class="chart-placeholder"></p>
       <div class="charts-grid">
-
-        <div class="card">
-          <canvas id="chart-cluster"></canvas>
-        </div>
-
-        <div class="card">
-          <canvas id="chart-power"></canvas>
-        </div>
-
-        <div class="card">
-          <canvas id="chart-gpu"></canvas>
-        </div>
-
+        <div class="card"><canvas id="chart-cluster"></canvas></div>
+        <div class="card"><canvas id="chart-cluster-freq"></canvas></div>
+        <div class="card"><canvas id="chart-power"></canvas></div>
+        <div class="card"><canvas id="chart-gpu"></canvas></div>
       </div>
     </section>
 
