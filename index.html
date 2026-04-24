@@ -76,6 +76,231 @@
       </div>
     </section>
 
+    <!-- ── Analysis ──────────────────────────────────────────────────────── -->
+    <section class="section" id="section-analysis">
+      <h2 class="section-title">시스템 분석 · 업그레이드 권장 <span class="section-tag">3h 로그 기반</span></h2>
+
+      <!-- Key stats row -->
+      <div class="analysis-stats-row">
+        <div class="stat-pill stat-pill--danger">
+          <span class="stat-pill-label">Unused RAM 최솟값</span>
+          <span class="stat-pill-value">68 MB</span>
+          <span class="stat-pill-sub">16 GB 중 잔여 0.4%</span>
+        </div>
+        <div class="stat-pill stat-pill--warning">
+          <span class="stat-pill-label">E-Cluster 평균 잔류</span>
+          <span class="stat-pill-value">80.9%</span>
+          <span class="stat-pill-sub">효율 코어 상시 고부하</span>
+        </div>
+        <div class="stat-pill stat-pill--warning">
+          <span class="stat-pill-label">P-Cluster 최대 주파수</span>
+          <span class="stat-pill-value">3,111 MHz</span>
+          <span class="stat-pill-sub">3시간 내내 최고 클럭 유지</span>
+        </div>
+        <div class="stat-pill stat-pill--safe">
+          <span class="stat-pill-label">디스크 최대 전송</span>
+          <span class="stat-pill-value">275 MB/s</span>
+          <span class="stat-pill-sub">평균 42 MB/s · p95 193 MB/s</span>
+        </div>
+        <div class="stat-pill stat-pill--safe">
+          <span class="stat-pill-label">Thermal 이벤트</span>
+          <span class="stat-pill-value">0건</span>
+          <span class="stat-pill-sub">스로틀링 없음</span>
+        </div>
+      </div>
+
+      <!-- 3-column recommendation grid -->
+      <div class="analysis-grid">
+
+        <!-- Resource bottleneck -->
+        <div class="analysis-card">
+          <div class="analysis-card-header">
+            <span class="analysis-icon">⚡</span>
+            <h3>리소스 병목 순위</h3>
+          </div>
+          <ol class="bottleneck-list">
+            <li>
+              <span class="btn-severity btn-severity--critical">CRITICAL</span>
+              <div class="bottleneck-detail">
+                <strong>물리 메모리 (RAM)</strong>
+                <p>Unused 최솟값 68 MB — 16 GB 전체에서 잔여 0.4%. 메모리 스파이크 하나로 즉시 스왑 압력 발생. 현재 스왑아웃이 없는 것은 Apple Unified Memory의 고속 NVMe 스왑 덕분이나, 오디오 버퍼 지연·드롭아웃 위험은 상존.</p>
+              </div>
+            </li>
+            <li>
+              <span class="btn-severity btn-severity--high">HIGH</span>
+              <div class="bottleneck-detail">
+                <strong>E-Cluster (효율 코어)</strong>
+                <p>평균 Active Residency 80.9%. 백그라운드 OS 작업·플러그인 스캔·네트워크 I/O가 효율 코어를 지속 점유. P-코어가 오디오 처리에 집중할 여유가 줄어드는 간접 압박.</p>
+              </div>
+            </li>
+            <li>
+              <span class="btn-severity btn-severity--high">HIGH</span>
+              <div class="bottleneck-detail">
+                <strong>P-Cluster 클럭 포화</strong>
+                <p>평균 3,099 MHz · 최대 3,111 MHz (M1 Max spec). 성능 코어가 3시간 내내 최고 클럭을 유지 — 추가 CPU 여유 없이 빡빡하게 운용 중.</p>
+              </div>
+            </li>
+            <li>
+              <span class="btn-severity btn-severity--low">LOW</span>
+              <div class="bottleneck-detail">
+                <strong>디스크 I/O 순간 피크</strong>
+                <p>평균 42 MB/s로 안정적이나 p95 193 MB/s, 최대 275 MB/s 순간 피크 발생. 현행 NVMe SSD 한계에서 여유가 있어 크리티컬하지 않음.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <!-- Recommended spec -->
+        <div class="analysis-card analysis-card--accent">
+          <div class="analysis-card-header">
+            <span class="analysis-icon">★</span>
+            <h3>권장 사양</h3>
+          </div>
+          <div class="spec-recommendation">
+            <div class="spec-rec-model">Mac mini M4 Pro</div>
+            <div class="spec-rec-sub">14코어 CPU (10P + 4E) · 24코어 GPU</div>
+            <div class="spec-rec-ram">48 GB Unified Memory</div>
+          </div>
+          <ul class="rec-reasons">
+            <li>
+              <strong>메모리 여유 30 GB+</strong> — 현재 사용량(~15.9 GB)의 3배. 대형 프러덕션 세션, 추가 플러그인, OS 캐시 여유분 확보.
+            </li>
+            <li>
+              <strong>P코어 10개</strong> — M1의 4P → 10P. 오디오 DSP 스레드 병렬 처리 여유가 크게 증가, 버퍼 언더런 확률 대폭 감소.
+            </li>
+            <li>
+              <strong>M4 Pro 전력 효율</strong> — 동일 Package 전력(~2.8 W avg)에서 더 높은 성능. Thermal 이벤트 없이 작동 가능.
+            </li>
+            <li>
+              <strong>메모리 대역폭 273 GB/s</strong> — M1의 68 GB/s 대비 4배. 대형 샘플 라이브러리·플러그인 I/O 병목 해소.
+            </li>
+          </ul>
+          <div class="spec-note">※ 스토리지: 512 GB 이상 NVMe (현행 전송 피크 기준 여유)</div>
+        </div>
+
+        <!-- Minimum spec -->
+        <div class="analysis-card">
+          <div class="analysis-card-header">
+            <span class="analysis-icon">▽</span>
+            <h3>최소 허용 사양</h3>
+          </div>
+          <div class="spec-recommendation spec-recommendation--min">
+            <div class="spec-rec-model">Mac mini M2 Pro</div>
+            <div class="spec-rec-sub">12코어 CPU (8P + 4E) · 19코어 GPU</div>
+            <div class="spec-rec-ram">24 GB Unified Memory</div>
+          </div>
+          <ul class="rec-reasons">
+            <li>
+              <strong>RAM 24 GB</strong> — 현재 실사용량(~15.9 GB) + 8 GB 여유. 소규모 세션 추가 시 한계치에 근접하므로 최소 기준으로만 권장.
+            </li>
+            <li>
+              <strong>P코어 8개</strong> — M1(4P) 대비 2배. 현행 오디오 부하는 충분히 처리 가능.
+            </li>
+            <li>
+              <strong>메모리 대역폭 200 GB/s</strong> — M1(68 GB/s) 대비 2.9배. 플러그인 동시 처리 시 병목 완화.
+            </li>
+          </ul>
+          <div class="spec-warn">⚠ 24 GB는 현재 세션 규모가 늘어날 경우 빠르게 포화될 수 있습니다. 예산이 허락한다면 32 GB 이상을 권장합니다.</div>
+        </div>
+
+      </div>
+
+      <!-- Summary table -->
+      <div class="analysis-table-wrap">
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th>지표</th>
+              <th>3h 평균</th>
+              <th>최솟값</th>
+              <th>최댓값</th>
+              <th>평가</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row--danger">
+              <td>Unused RAM</td>
+              <td>262 MB</td>
+              <td>68 MB</td>
+              <td>—</td>
+              <td><span class="tbl-badge tbl-badge--danger">위험</span></td>
+            </tr>
+            <tr>
+              <td>CPU User %</td>
+              <td>13.6%</td>
+              <td>—</td>
+              <td>—</td>
+              <td><span class="tbl-badge tbl-badge--safe">양호</span></td>
+            </tr>
+            <tr>
+              <td>CPU Sys %</td>
+              <td>13.1%</td>
+              <td>—</td>
+              <td>—</td>
+              <td><span class="tbl-badge tbl-badge--safe">양호</span></td>
+            </tr>
+            <tr class="row--warning">
+              <td>E-Cluster Residency</td>
+              <td>80.9%</td>
+              <td>—</td>
+              <td>—</td>
+              <td><span class="tbl-badge tbl-badge--warning">주의</span></td>
+            </tr>
+            <tr class="row--warning">
+              <td>P-Cluster Residency</td>
+              <td>56.2%</td>
+              <td>—</td>
+              <td>—</td>
+              <td><span class="tbl-badge tbl-badge--warning">주의</span></td>
+            </tr>
+            <tr class="row--warning">
+              <td>P-Cluster 주파수</td>
+              <td>3,099 MHz</td>
+              <td>—</td>
+              <td>3,111 MHz</td>
+              <td><span class="tbl-badge tbl-badge--warning">포화</span></td>
+            </tr>
+            <tr>
+              <td>GPU Residency</td>
+              <td>23.7%</td>
+              <td>—</td>
+              <td>—</td>
+              <td><span class="tbl-badge tbl-badge--safe">양호</span></td>
+            </tr>
+            <tr>
+              <td>Disk MB/s</td>
+              <td>42 MB/s</td>
+              <td>—</td>
+              <td>275 MB/s</td>
+              <td><span class="tbl-badge tbl-badge--safe">양호</span></td>
+            </tr>
+            <tr>
+              <td>Package Power</td>
+              <td>2,837 mW</td>
+              <td>—</td>
+              <td>12,580 mW</td>
+              <td><span class="tbl-badge tbl-badge--safe">양호</span></td>
+            </tr>
+            <tr>
+              <td>Thermal 이벤트</td>
+              <td>—</td>
+              <td>—</td>
+              <td>0건</td>
+              <td><span class="tbl-badge tbl-badge--safe">정상</span></td>
+            </tr>
+            <tr>
+              <td>Swapouts</td>
+              <td>—</td>
+              <td>—</td>
+              <td>0건</td>
+              <td><span class="tbl-badge tbl-badge--safe">정상</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
   </main>
 
   <script src="js/parsers.js"></script>
