@@ -281,6 +281,35 @@ function renderHwSection(data) {
   ]);
 }
 
+// ── Time utilities ────────────────────────────────────────────────────────────
+
+/** "HH:MM:SS" → total seconds since midnight */
+function hmsToSec(hms) {
+  const [h, m, s] = hms.split(':').map(Number);
+  return h * 3600 + m * 60 + (s || 0);
+}
+
+/** seconds since midnight → "HH:MM" */
+function secToHHMM(sec) {
+  const h = Math.floor(sec / 3600) % 24;
+  const m = Math.floor((sec % 3600) / 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * Derive evenly-spaced "HH:MM" labels for disk samples,
+ * anchored to the CPU log's actual start/end times.
+ */
+function deriveDiskLabels(cpuTimestamps, diskCount) {
+  if (!cpuTimestamps || cpuTimestamps.length < 2 || diskCount === 0) return null;
+  const startSec = hmsToSec(cpuTimestamps[0]);
+  const endSec   = hmsToSec(cpuTimestamps[cpuTimestamps.length - 1]);
+  const duration = endSec - startSec;
+  return Array.from({ length: diskCount }, (_, i) =>
+    secToHHMM(startSec + (i / (diskCount - 1)) * duration)
+  );
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 async function init() {
@@ -292,8 +321,14 @@ async function init() {
     fetchText(DATA_FILES.hw),
   ]);
 
+  let cpuTimestamps = null;
+
   if (cpuResult.status === 'fulfilled') {
-    try { renderCpuSection(parseCpuSummary(cpuResult.value)); }
+    try {
+      const cpuData = parseCpuSummary(cpuResult.value);
+      cpuTimestamps = cpuData.timestamps;
+      renderCpuSection(cpuData);
+    }
     catch (e) { console.warn('CPU 섹션 파싱 오류:', e); showSectionError('section-cpu', '파싱 오류: ' + e.message); }
   } else {
     console.warn('CPU 로그 로드 실패:', cpuResult.reason);
@@ -301,7 +336,12 @@ async function init() {
   }
 
   if (diskResult.status === 'fulfilled') {
-    try { renderDiskSection(parseDiskLog(diskResult.value)); }
+    try {
+      const diskData = parseDiskLog(diskResult.value);
+      const derived = deriveDiskLabels(cpuTimestamps, diskData.labels.length);
+      if (derived) diskData.labels = derived;
+      renderDiskSection(diskData);
+    }
     catch (e) { console.warn('Disk 섹션 파싱 오류:', e); showSectionError('section-disk', '파싱 오류: ' + e.message); }
   } else {
     console.warn('Disk 로그 로드 실패:', diskResult.reason);

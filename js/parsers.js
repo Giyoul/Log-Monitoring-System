@@ -73,7 +73,7 @@ function parseCpuSummary(text) {
       : null;
     if (swapoutsRaw !== null) prevSwapouts = swapoutsRaw;
 
-    result.timestamps.push(ts.split(' ')[1]); // time part only
+    result.timestamps.push(ts.split(' ')[1].substring(0, 5)); // HH:MM
     result.userPct.push(user);
     result.sysPct.push(sys);
     result.idlePct.push(idle);
@@ -175,8 +175,8 @@ function parseHwLog(text) {
     // Timestamp: "(Tue Apr 14 16:54:03 2026 +0900)"
     const tsMatch = snap.match(/\(([^)]+\d{4}[^)]*)\)/);
     const ts = tsMatch ? tsMatch[1].trim() : `S${result.timestamps.length + 1}`;
-    // Extract time portion HH:MM:SS
-    const timeMatch = ts.match(/(\d{2}:\d{2}:\d{2})/);
+    // Extract time portion HH:MM
+    const timeMatch = ts.match(/(\d{2}:\d{2}):\d{2}/);
     result.timestamps.push(timeMatch ? timeMatch[1] : ts);
 
     // E-Cluster HW active residency & frequency
