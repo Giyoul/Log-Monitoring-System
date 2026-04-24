@@ -43,8 +43,35 @@ const CHART_DEFAULTS = {
   },
 };
 
-// ── Chart registry (canvasId → config) for modal re-render ───────────────────
+// ── Chart registry (canvasId → original config) for modal re-render ──────────
+// Stores the full-resolution data so modal can show more points than card view.
 const chartRegistry = new Map();
+
+/**
+ * Downsample labels + datasets to at most `target` evenly-spaced indices.
+ * Always keeps the first and last point.
+ * Per-point arrays (data, pointColors) are sliced the same way.
+ */
+function downsample(labels, datasets, target) {
+  const n = labels.length;
+  if (n <= target) return { labels, datasets };
+
+  const stride = n / target;
+  const indices = [];
+  for (let i = 0; i < target; i++) {
+    indices.push(Math.min(Math.round(i * stride), n - 1));
+  }
+  // Guarantee last point
+  if (indices[indices.length - 1] !== n - 1) indices[indices.length - 1] = n - 1;
+
+  const sampledLabels = indices.map(i => labels[i]);
+  const sampledDatasets = datasets.map(ds => {
+    const sampled = { ...ds, data: indices.map(i => ds.data[i]) };
+    if (ds.pointColors) sampled.pointColors = indices.map(i => ds.pointColors[i]);
+    return sampled;
+  });
+  return { labels: sampledLabels, datasets: sampledDatasets };
+}
 
 function mergeDeep(target, source) {
   const out = Object.assign({}, target);
@@ -73,31 +100,40 @@ function adaptivePointRadius(count) {
  * @param {Array<{label, data, color, pointColors?}>} datasets
  * @param {object} overrides
  */
+const CARD_SAMPLES  = 300;  // max points rendered in card view
+const MODAL_SAMPLES = 800;  // max points rendered in modal view
+
 function createLineChart(canvasId, labels, datasets, overrides = {}) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) { console.warn(`Canvas #${canvasId} not found`); return null; }
 
-  const radius = adaptivePointRadius(labels.length);
   const config = mergeDeep(CHART_DEFAULTS, overrides);
-  const chartData = {
-    labels,
-    datasets: datasets.map(ds => ({
+
+  // Store original full-resolution data for modal
+  chartRegistry.set(canvasId, { type: 'line', labels, datasets, options: config });
+
+  // Downsample for card view
+  const { labels: cardLabels, datasets: cardDatasets } = downsample(labels, datasets, CARD_SAMPLES);
+  const radius = adaptivePointRadius(cardLabels.length);
+
+  const cardData = {
+    labels: cardLabels,
+    datasets: cardDatasets.map(ds => ({
       label: ds.label,
       data: ds.data,
       borderColor: ds.color,
-      backgroundColor: ds.color + '22',
-      borderWidth: 2,
+      backgroundColor: ds.color + '18',
+      borderWidth: 1.5,
       pointRadius: radius,
       pointHoverRadius: Math.max(radius, 4),
       pointBackgroundColor: ds.pointColors || ds.color,
-      tension: 0.3,
+      tension: 0.1,
       fill: false,
       spanGaps: true,
     })),
   };
 
-  chartRegistry.set(canvasId, { type: 'line', data: chartData, options: config });
-  return new Chart(canvas.getContext('2d'), { type: 'line', data: chartData, options: config });
+  return new Chart(canvas.getContext('2d'), { type: 'line', data: cardData, options: config });
 }
 
 /**
@@ -111,9 +147,16 @@ function createBarChart(canvasId, labels, datasets, overrides = {}) {
   if (!canvas) { console.warn(`Canvas #${canvasId} not found`); return null; }
 
   const config = mergeDeep(CHART_DEFAULTS, overrides);
+
+  // Store original full-resolution data for modal
+  chartRegistry.set(canvasId, { type: 'bar', labels, datasets, options: config });
+
+  // Downsample for card view
+  const { labels: cardLabels, datasets: cardDatasets } = downsample(labels, datasets, CARD_SAMPLES);
+
   const chartData = {
-    labels,
-    datasets: datasets.map(ds => ({
+    labels: cardLabels,
+    datasets: cardDatasets.map(ds => ({
       label: ds.label,
       data: ds.data,
       backgroundColor: ds.color + 'cc',
@@ -122,7 +165,6 @@ function createBarChart(canvasId, labels, datasets, overrides = {}) {
     })),
   };
 
-  chartRegistry.set(canvasId, { type: 'bar', data: chartData, options: config });
   return new Chart(canvas.getContext('2d'), { type: 'bar', data: chartData, options: config });
 }
 
@@ -143,22 +185,43 @@ function pointColorsFromThreshold(values, isDanger, baseColor = COLORS.user, dan
  * Used by the modal to display a full-size version of any chart.
  */
 function renderToCanvas(sourceId, targetCanvas) {
-  const config = chartRegistry.get(sourceId);
-  if (!config) return null;
-  // Deep-clone to avoid Chart.js mutating the registry entry
-  const cloned = JSON.parse(JSON.stringify(config));
-  // In modal, restore full point radius
-  if (cloned.type === 'line') {
-    cloned.data.datasets.forEach(ds => {
-      ds.pointRadius = 3;
-      ds.pointHoverRadius = 6;
+  const entry = chartRegistry.get(sourceId);
+  if (!entry) return null;
+
+  const modalOptions = mergeDeep(entry.options, {
+    plugins: { title: { font: { size: 16 } } },
+    scales: { x: { ticks: { maxTicksLimit: 20 } } },
+  });
+
+  if (entry.type === 'line') {
+    // Use higher-resolution downsample for modal
+    const { labels: modalLabels, datasets: modalDatasets } = downsample(entry.labels, entry.datasets, MODAL_SAMPLES);
+    const radius = adaptivePointRadius(modalLabels.length);
+
+    return new Chart(targetCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: modalLabels,
+        datasets: modalDatasets.map(ds => ({
+          label: ds.label,
+          data: ds.data,
+          borderColor: ds.color,
+          backgroundColor: ds.color + '18',
+          borderWidth: 1.5,
+          pointRadius: radius,
+          pointHoverRadius: Math.max(radius, 5),
+          pointBackgroundColor: ds.pointColors || ds.color,
+          tension: 0.1,
+          fill: false,
+          spanGaps: true,
+        })),
+      },
+      options: modalOptions,
     });
   }
-  cloned.options = mergeDeep(cloned.options, {
-    plugins: { title: { font: { size: 16 } } },
-    scales: {
-      x: { ticks: { maxTicksLimit: 20 } },
-    },
-  });
+
+  // Bar chart: deep-clone and adjust options only
+  const cloned = JSON.parse(JSON.stringify({ type: entry.type, data: entry.data, options: entry.options }));
+  cloned.options = modalOptions;
   return new Chart(targetCanvas.getContext('2d'), cloned);
 }
