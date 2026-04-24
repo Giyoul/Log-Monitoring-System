@@ -208,7 +208,8 @@ function renderDiskSection(data) {
 function renderHwSection(data) {
   const { timestamps: ts, eClusterResidency, pClusterResidency,
           eClusterFreqMHz, pClusterFreqMHz,
-          cpuPowerMW, gpuPowerMW, anePowerMW,
+          eClusterPowerMW, pClusterPowerMW,
+          cpuPowerMW, gpuPowerMW, anePowerMW, dramPowerMW, packagePowerMW,
           gpuResidency, gpuFreqMHz, thermalLevels, machineModel } = data;
 
   createLineChart('chart-cluster', ts, [
@@ -223,14 +224,31 @@ function renderHwSection(data) {
   ], { plugins: { title: { display: true, text: 'CPU 클러스터 동작 주파수 (MHz)', color: '#cdd6f4' } },
        scales: { y: { min: 0 } } });
 
-  createBarChart('chart-power', ts, [
-    { label: 'CPU Power (mW)', data: cpuPowerMW, color: COLORS.cpuPwr },
-    { label: 'GPU Power (mW)', data: gpuPowerMW, color: COLORS.gpuPwr },
-    { label: 'ANE Power (mW)', data: anePowerMW, color: COLORS.anePwr },
-  ], { plugins: { title: { display: true, text: '전력 소비 (mW)', color: '#cdd6f4' } } });
+  // Package Power breakdown — prefer detailed cluster data if available
+  const hasPkg = packagePowerMW.some(v => v !== null);
+  if (hasPkg) {
+    createLineChart('chart-power', ts, [
+      { label: 'Package (mW)',    data: packagePowerMW,  color: COLORS.cpuPwr },
+      { label: 'CPU (mW)',        data: cpuPowerMW,      color: COLORS.eCluster },
+      { label: 'DRAM (mW)',       data: dramPowerMW,     color: COLORS.anePwr },
+      { label: 'GPU (mW)',        data: gpuPowerMW,      color: COLORS.gpuPwr },
+    ], { plugins: { title: { display: true, text: '전력 소비 — Package / CPU / DRAM / GPU (mW)', color: '#cdd6f4' } },
+         scales: { y: { min: 0 } } });
+
+    createBarChart('chart-cluster-power', ts, [
+      { label: 'E-Cluster (mW)', data: eClusterPowerMW, color: COLORS.eFreq },
+      { label: 'P-Cluster (mW)', data: pClusterPowerMW, color: COLORS.pFreq },
+    ], { plugins: { title: { display: true, text: 'CPU 클러스터별 전력 (mW)', color: '#cdd6f4' } } });
+  } else {
+    createBarChart('chart-power', ts, [
+      { label: 'CPU Power (mW)', data: cpuPowerMW, color: COLORS.cpuPwr },
+      { label: 'GPU Power (mW)', data: gpuPowerMW, color: COLORS.gpuPwr },
+      { label: 'ANE Power (mW)', data: anePowerMW, color: COLORS.anePwr },
+    ], { plugins: { title: { display: true, text: '전력 소비 (mW)', color: '#cdd6f4' } } });
+  }
 
   createLineChart('chart-gpu', ts, [
-    { label: 'GPU Active (%)',   data: gpuResidency, color: COLORS.gpuRes },
+    { label: 'GPU Active (%)',  data: gpuResidency, color: COLORS.gpuRes },
     { label: 'GPU Freq (MHz)', data: gpuFreqMHz,   color: COLORS.gpuPwr },
   ], { plugins: { title: { display: true, text: 'GPU 사용률 (%) · 동작 주파수 (MHz)', color: '#cdd6f4' } },
        scales: { y: { min: 0 } } });
@@ -245,19 +263,21 @@ function renderHwSection(data) {
       lastThermal === 'Nominal' ? '✓ Thermal: Nominal' : `Thermal: ${lastThermal}`);
   }
 
-  // Spec ribbon
+  // Header subtitle
   if (machineModel) {
     const modelEl = document.getElementById('machine-model');
-    if (modelEl) modelEl.textContent = machineModel;
+    if (modelEl) modelEl.textContent = `${machineModel}  ·  Apple M1  ·  8코어 (4P+4E)  ·  16 GB`;
   }
+
+  const pkgMax = maxOf(packagePowerMW);
   setSpecRibbon('specs-hw', [
-    ['머신',          machineModel || '—'],
-    ['E-Cluster 최대', fmtMHz(maxOf(eClusterFreqMHz))],
-    ['P-Cluster 최대', fmtMHz(maxOf(pClusterFreqMHz))],
-    ['GPU Freq 최대',  fmtMHz(maxOf(gpuFreqMHz))],
-    ['CPU 전력 최대',  (maxOf(cpuPowerMW) ?? '—') + ' mW'],
-    ['GPU 전력 최대',  (maxOf(gpuPowerMW) ?? '—') + ' mW'],
-    ['샘플 수',        ts.length + '개'],
+    ['E-Cluster 최대 주파수', fmtMHz(maxOf(eClusterFreqMHz))],
+    ['P-Cluster 최대 주파수', fmtMHz(maxOf(pClusterFreqMHz))],
+    ['GPU 최대 주파수',       fmtMHz(maxOf(gpuFreqMHz))],
+    ['Package 전력 최대',     pkgMax !== null ? pkgMax + ' mW' : (maxOf(cpuPowerMW) ?? '—') + ' mW (CPU)'],
+    ['DRAM 전력 최대',        (maxOf(dramPowerMW) ?? '—') + ' mW'],
+    ['GPU 전력 최대',         (maxOf(gpuPowerMW) ?? '—') + ' mW'],
+    ['샘플 수',               ts.length + '개'],
   ]);
 }
 

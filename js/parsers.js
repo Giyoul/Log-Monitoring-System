@@ -148,9 +148,13 @@ function parseHwLog(text) {
     pClusterResidency: [],
     eClusterFreqMHz: [],
     pClusterFreqMHz: [],
+    eClusterPowerMW: [],   // M1+: E-Cluster Power
+    pClusterPowerMW: [],   // M1+: P-Cluster Power
     cpuPowerMW: [],
     gpuPowerMW: [],
     anePowerMW: [],
+    dramPowerMW: [],       // M1+: DRAM Power
+    packagePowerMW: [],    // M1+: total Package Power
     gpuResidency: [],
     gpuFreqMHz: [],
     thermalLevels: [],
@@ -187,22 +191,33 @@ function parseHwLog(text) {
     const pFreqMatch = snap.match(/P-Cluster HW active frequency:\s*([\d.]+)\s*MHz/);
     result.pClusterFreqMHz.push(pFreqMatch ? parseFloat(pFreqMatch[1]) : null);
 
-    // CPU Power: "CPU Power: 1148 mW"
-    const cpuPwrMatch = snap.match(/CPU Power:\s*([\d.]+)\s*mW/);
+    // Cluster-level power (M1+)
+    const ePwrMatch  = snap.match(/E-Cluster Power:\s*([\d.]+)\s*mW/);
+    result.eClusterPowerMW.push(ePwrMatch ? parseFloat(ePwrMatch[1]) : null);
+    const pPwrMatch  = snap.match(/P-Cluster Power:\s*([\d.]+)\s*mW/);
+    result.pClusterPowerMW.push(pPwrMatch ? parseFloat(pPwrMatch[1]) : null);
+
+    // CPU Power (total, matches first occurrence)
+    const cpuPwrMatch = snap.match(/^CPU Power:\s*([\d.]+)\s*mW/m);
     result.cpuPowerMW.push(cpuPwrMatch ? parseFloat(cpuPwrMatch[1]) : null);
 
-    // GPU Power (first occurrence, before Combined)
+    // GPU Power (first ^GPU Power line)
     const gpuPwrMatch = snap.match(/^GPU Power:\s*([\d.]+)\s*mW/m);
     result.gpuPowerMW.push(gpuPwrMatch ? parseFloat(gpuPwrMatch[1]) : null);
 
-    // ANE Power
-    const anePwrMatch = snap.match(/ANE Power:\s*([\d.]+)\s*mW/);
+    // ANE / DRAM / Package Power
+    const anePwrMatch  = snap.match(/^ANE Power:\s*([\d.]+)\s*mW/m);
     result.anePowerMW.push(anePwrMatch ? parseFloat(anePwrMatch[1]) : null);
+    const dramPwrMatch = snap.match(/^DRAM Power:\s*([\d.]+)\s*mW/m);
+    result.dramPowerMW.push(dramPwrMatch ? parseFloat(dramPwrMatch[1]) : null);
+    const pkgPwrMatch  = snap.match(/^Package Power:\s*([\d.]+)\s*mW/m);
+    result.packagePowerMW.push(pkgPwrMatch ? parseFloat(pkgPwrMatch[1]) : null);
 
-    // GPU HW active residency & frequency
-    const gpuResMatch = snap.match(/GPU HW active residency:\s*([\d.]+)%/);
+    // GPU active residency & frequency
+    // M1: "GPU active residency" / M3+: "GPU HW active residency"
+    const gpuResMatch  = snap.match(/GPU (?:HW )?active residency:\s*([\d.]+)%/);
     result.gpuResidency.push(gpuResMatch ? parseFloat(gpuResMatch[1]) : null);
-    const gpuFreqMatch = snap.match(/GPU HW active frequency:\s*([\d.]+)\s*MHz/);
+    const gpuFreqMatch = snap.match(/GPU (?:HW )?active frequency:\s*([\d.]+)\s*MHz/);
     result.gpuFreqMHz.push(gpuFreqMatch ? parseFloat(gpuFreqMatch[1]) : null);
 
     // Thermal pressure level: "Current pressure level: Nominal"
